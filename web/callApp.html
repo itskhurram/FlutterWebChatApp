@@ -1,0 +1,368 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="UTF-8">
+  <meta content="IE=Edge" http-equiv="X-UA-Compatible">
+  <meta name="description" content="KarmaCollab App">
+  <!-- iOS meta tags & icons -->
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="black">
+  <meta name="apple-mobile-web-app-title" content="KarmaCollabApp">
+  <link rel="apple-touch-icon" href="icons/Icon-192.png">
+  <!-- Favicon -->
+  <link rel="shortcut icon" type="image/png" href="favicon.png" />
+  <link href="callApp.css" rel="stylesheet">
+  <title>KarmaCollab App</title>
+  <link rel="manifest" href="manifest.json">
+  <script src="https://meet.jit.si/external_api.js"></script>
+</head>
+
+<body bgcolor="#022950">
+   <script src="https://www.gstatic.com/firebasejs/7.24.0/firebase-app.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/7.24.0/firebase-firestore.js"></script>
+
+  <script>
+     var firebaseConfig = {
+      apiKey: "AIzaSyDZqOJvwE4OsYFunIoEKgs4d--K-a_vNNk",
+      authDomain: "myuwi01.firebaseapp.com",
+      projectId: "myuwi01",
+      storageBucket: "myuwi01.appspot.com",
+      messagingSenderId: "43400417894",
+      appId: "1:43400417894:web:ab4a5c7915916a257113a7",
+      measurementId: "G-S5GYWYQ6E1"
+    };
+    firebase.initializeApp(firebaseConfig);
+    var databaseHandler = firebase.firestore();
+  </script>
+  <div class="img-container">
+    <img src="UCBOOST_WHITE.png" alt="UC Davis Logo" style="width: 300px;" />
+  </div>
+  <div style="text-align: right;">
+    <a href="#" onclick="window.close();">
+      <img src="backButton.PNG">
+    </a>
+  </div>
+  <div>
+    <div id="renderer"></div>
+  </div>
+  <script src="callApp.js"></script>
+  <script>
+    const urlParams = new URLSearchParams(window.location.search);
+    const Room = urlParams.get("room");
+    const firstName = UCDavisRot13(urlParams.get("fn"));
+    const lastName = UCDavisRot13(urlParams.get("ln"));
+    const emailAddress = UCDavisRot13(urlParams.get("em"));
+    const userName = emailAddress.match(/^([^@]*)@/)[1];
+    const questionownerEmailAddress = UCDavisRot13(urlParams.get("qoem"));
+    const questionOwnerUsername = questionownerEmailAddress.match(/^([^@]*)@/)[1];
+    const isOwner = urlParams.get("isOwner");
+    const courseCode = UCDavisRot13(urlParams.get("cc"));
+    const ownerStudentId = urlParams.get("osid");
+    const helperStudentid = urlParams.get("hsid");
+
+    const from = lastName + ", " + firstName;
+    var callCounter = 0;
+    var ownerUserObject = new Object();
+    var ConferenceUserList = new Array();
+    ownerUserObject.userName = questionOwnerUsername;
+    var participantObject = new Object();
+    var videoChatRoomDocumentId = "";
+    var startMilliSeconds = 0;
+   
+    
+
+    const domain = "meet.jit.si";
+    const options = {
+      roomName: Room,
+      userInfo: {
+        email: userName,
+        displayName: userName,
+      },
+      parentNode: document.querySelector("#renderer"),
+      configOverwrite: {
+        disableDeepLinking: true,
+        enableNoisyMicDetection: true,
+        enableNoAudioDetection: true,
+        maxFullResolutionParticipants: 2,
+        startWithAudioMuted: false,
+        enableWelcomePage: false,
+        requireDisplayName: true
+      },
+      interfaceConfigOverwrite: {
+        DEFAULT_BACKGROUND: '#022950',
+        DEFAULT_LOCAL_DISPLAY_NAME: "",
+        DEFAULT_LOGO_URL: 'UCBOOST_WHITE.png',
+        DEFAULT_REMOTE_DISPLAY_NAME: "",
+        DEFAULT_WELCOME_PAGE_LOGO_URL: 'UCBOOST_WHITE.png',
+        SHOW_JITSI_WATERMARK: false,
+        SHOW_CHROME_EXTENSION_BANNER: false,
+        SHOW_WATERMARK_FOR_GUESTS: false,
+        SHOW_BRAND_WATERMARK: false,
+        BRAND_WATERMARK_LINK: "https://www.ucboost.com",
+        JITSI_WATERMARK_LINK: "https://www.ucboost.com",
+        AUTHENTICATION_ENABLE: false,
+        ENABLE_FEEDBACK_ANIMATION: false,
+        MOBILE_APP_PROMO: false,
+        SHOW_POWERED_BY: false,
+        SHOW_DEEP_LINKING_IMAGE: false,
+        INVITATION_POWERED_BY: false,
+        CLOSE_PAGE_GUEST_HINT: false,
+        SHOW_PROMOTIONAL_CLOSE_PAGE: false,
+        RANDOM_AVATAR_URL_PREFIX: false,
+        RANDOM_AVATAR_URL_SUFFIX: false,
+        DISPLAY_WELCOME_PAGE_CONTENT: false,
+        DISPLAY_WELCOME_PAGE_TOOLBAR_ADDITIONAL_CONTENT: false,
+        GENERATE_ROOMNAMES_ON_WELCOME_PAGE: false,
+        HIDE_DEEP_LINKING_LOGO: true,
+        TOOLBAR_BUTTONS: [
+          "microphone",
+          "camera",
+          "closedcaptions",
+          "desktop",
+          "fullscreen",
+          "fodeviceselection",
+          "hangup",
+          "profile",
+          "chat",
+          "recording",
+          "livestreaming",
+          "etherpad",
+          "sharedvideo",
+          "settings",
+          "raisehand",
+          "videoquality",
+          "filmstrip",
+          "invite",
+          "feedback",
+          "stats",
+          "shortcuts",
+          "tileview",
+          "videobackgroundblur",
+          "download",
+          "help",
+          "mute-everyone",
+          "e2ee", //, 'info'
+        ],
+      },
+    };
+
+    const UCDavisAppAPI = new JitsiMeetExternalAPI(domain, options);
+    UCDavisAppAPI.addEventListeners({
+      videoConferenceLeft: VideoConferenceLeft,
+      //videoConferenceJoined: VideoConferenceJoined,
+      participantJoined: ParticipantJoined,
+      participantLeft: ParticipantLeft,
+      //readyToClose : ReadyToClose 
+    });
+
+    function ParticipantJoined(Participant) {
+      participantObject = Participant;
+      if(questionOwnerUsername.trim().toLowerCase() != Participant.displayName.trim().toLowerCase() && questionOwnerUsername.trim().toLowerCase() != "" && Participant.displayName.trim().toLowerCase() !="" && isOwner.trim().toLocaleLowerCase()=="true")
+      {
+            
+          databaseHandler.collection('Question').doc(Room).update({
+            'activityStarted': true,
+          });
+          databaseHandler.collection("Student")
+            .where("email", "==", Participant.displayName.toLowerCase()+'@my.uwi.edu')
+            .get().then(function(querySnapshot){
+              querySnapshot.forEach(function(docRef) {
+                databaseHandler.collection("StudentParticipation").doc(docRef.id+'_'+courseCode)
+                .get()
+                .then(function(doc) {
+                  if (doc.exists) {
+                    databaseHandler.collection("StudentParticipation").doc( docRef.id+'_'+courseCode).update({
+                      'studentId': docRef.id,
+                      'lastName': docRef.data()['lastName'],
+                      'firstName': docRef.data()['firstName'],
+                      'courseCode': courseCode,
+                      'questionIdList': firebase.firestore.FieldValue.arrayUnion(Room),
+                      'updatedDate': new Date().getTime()
+                    }).catch(function(error) {
+                        console.log("Error getting documents: ", error);
+                    });
+                  } else {
+                    databaseHandler.collection("StudentParticipation").doc( docRef.id+'_'+courseCode).set({
+                      'studentId': docRef.id,
+                      'lastName': docRef.data()['lastName'],
+                      'firstName': docRef.data()['firstName'],
+                      'courseCode': courseCode,
+                      'questionIdList': firebase.firestore.FieldValue.arrayUnion(Room),
+                      'milliSecondsSpent': 0,
+                      'updatedDate': new Date().getTime()
+                    }).catch(function(error) {
+                        console.log("Error getting documents: ", error);
+                    });
+                  }
+                }).catch(function(error) {
+                  console.log("Error getting document:", error);
+                });
+            });
+        });
+        const videoChatRoomId = questionOwnerUsername + '_' + Participant.displayName + '_' + Room;
+
+          databaseHandler.collection("VideoChatRoom").doc(videoChatRoomId).get()
+          .then((docRef) => {
+
+              if(docRef != null && docRef != undefined && docRef.data() != null && docRef.data().totalMilliSecondsSpent != null && docRef.data().totalMilliSecondsSpent != undefined)
+              {
+                participantObject.currenttotalMilliSecondsSpent = docRef.data().totalMilliSecondsSpent;
+                databaseHandler.collection("VideoChatRoom")
+                .doc(videoChatRoomId)
+                .set({
+                  roomName: Room,
+                  userList: [questionOwnerUsername, Participant.displayName],
+                  videoChatRoomId: questionOwnerUsername + '_' + Participant.displayName + '_' + Room,
+                  fromUser: questionOwnerUsername,
+                  toUser: Participant.displayName,
+                  startDateTime: startMilliSeconds = new Date().getTime(),
+                  endDateTime: 0 ,
+                  totalMilliSecondsSpent: docRef.data().totalMilliSecondsSpent
+                })
+                .then(function (docRef) {
+
+                })
+                .catch(function (error) {
+                  console.error("Error adding document: ", error);
+                });
+              }
+              else
+              {
+                participantObject.currenttotalMilliSecondsSpent = 0;
+                databaseHandler.collection("VideoChatRoom")
+                .doc(videoChatRoomId)
+                .set({
+                  roomName: Room,
+                  userList: [questionOwnerUsername, Participant.displayName],
+                  videoChatRoomId: questionOwnerUsername + '_' + Participant.displayName + '_' + Room,
+                  fromUser: questionOwnerUsername,
+                  toUser: Participant.displayName,
+                  startDateTime: startMilliSeconds = new Date().getTime(),
+                  endDateTime: 0 ,
+                  totalMilliSecondsSpent: 0
+                })
+                .then(function (docRef) {
+
+                })
+                .catch(function (error) {
+                  console.error("Error adding document: ", error);
+                });
+              }
+                
+          });
+          
+      }
+
+    }
+    function ParticipantLeft(Participant){
+
+      if (participantObject.displayName != null && participantObject.displayName != undefined && participantObject.displayName != 'undefined' && questionOwnerUsername != null && questionOwnerUsername!= undefined && questionOwnerUsername !='undefined' && participantObject.displayName.trim().toLowerCase() !=  questionOwnerUsername.trim().toLowerCase() && questionOwnerUsername.trim().toLowerCase() != "" && participantObject.displayName.trim().toLowerCase() !=""){
+        const videoChatRoomId = questionOwnerUsername + '_' + participantObject.displayName + '_' + Room
+        databaseHandler.collection("VideoChatRoom").doc(videoChatRoomId).get()
+          .then((docRef) => { 
+           
+                  if(docRef.data().timeUpdated != null 
+                  && docRef.data().timeUpdated != undefined 
+                  && !isNaN(docRef.data().timeUpdated)
+                  &&  docRef.data().timeUpdated == 1){
+                    //Do Nothing
+                    window.close();
+                  }
+                  else {
+
+                        databaseHandler.collection('VideoChatRoom').doc(videoChatRoomId).update({
+                        endDateTime: new Date().getTime(),
+                        totalMilliSecondsSpent: participantObject.currenttotalMilliSecondsSpent + (new Date().getTime() - startMilliSeconds),
+                        timeUpdated : 1
+                      }).then(function () {
+
+                        if(startMilliSeconds >0 )
+                        {
+                             databaseHandler.collection("Student")
+                              .where("email", "==", participantObject.displayName.toLowerCase()+'@my.uwi.edu')
+                                .get().then(function(querySnapshot){
+                                  querySnapshot.forEach(function(docRef) {
+                                    databaseHandler.collection("StudentParticipation").doc(docRef.id+'_'+courseCode)
+                                    .get()
+                                    .then(function(doc) {
+                                      if (doc.exists) {
+                                        databaseHandler.collection("StudentParticipation").doc( docRef.id+'_'+courseCode).update({
+                                          'milliSecondsSpent': firebase.firestore.FieldValue.increment(new Date().getTime() - startMilliSeconds),
+                                          'updatedDate': new Date().getTime()
+                                        }).then(function(value){
+                                          window.close();
+                                        }).catch(function(error) {
+                                          window.close();
+                                            console.log("Error getting documents: ", error);
+                                        });
+
+                                      } 
+                                    }).catch(function(error) {
+                                      window.close();
+                                      console.log("Error getting document:", error);
+                                    });
+                                });
+                            });
+                          }
+                    });
+                  }
+            });
+      }
+    }
+    function VideoConferenceLeft(roomName) {
+
+
+      if (participantObject.displayName != null && participantObject.displayName != undefined && participantObject.displayName != 'undefined' && questionOwnerUsername != null && questionOwnerUsername!= undefined && questionOwnerUsername !='undefined' &&  participantObject.displayName.trim().toLowerCase() !=  questionOwnerUsername.trim().toLowerCase() &&  questionOwnerUsername.trim().toLowerCase() != "" && participantObject.displayName.trim().toLowerCase() !=""){
+        const videoChatRoomId = questionOwnerUsername + '_' + participantObject.displayName + '_' + Room
+        databaseHandler.collection("VideoChatRoom").doc(videoChatRoomId).get()
+          .then((docRef) => { 
+               if(docRef.data().timeUpdated != null 
+                  && docRef.data().timeUpdated != undefined 
+                  && !isNaN(docRef.data().timeUpdated)
+                  &&  docRef.data().timeUpdated == 1){
+                    //Do Nothing
+                    window.close();
+                  }
+                  else {
+
+                        databaseHandler.collection('VideoChatRoom').doc(videoChatRoomId).update({
+                        endDateTime: new Date().getTime(),
+                        totalMilliSecondsSpent: participantObject.currenttotalMilliSecondsSpent + (new Date().getTime() - startMilliSeconds),
+                        timeUpdated : 1
+                      }).then(function () {
+
+                        if(startMilliSeconds >0 ){
+                            databaseHandler.collection("Student")
+                            .where("email", "==", participantObject.displayName.toLowerCase()+'@my.uwi.edu')
+                              .get().then(function(querySnapshot){
+                                querySnapshot.forEach(function(docRef) {
+                                  databaseHandler.collection("StudentParticipation").doc(docRef.id+'_'+courseCode)
+                                  .get()
+                                  .then(function(doc) {
+                                    if (doc.exists) {
+                                      databaseHandler.collection("StudentParticipation").doc( docRef.id+'_'+courseCode).update({
+                                        'milliSecondsSpent': firebase.firestore.FieldValue.increment(new Date().getTime() - startMilliSeconds),
+                                        'updatedDate': new Date().getTime()
+                                      }).then(function(value){
+                                          window.close();
+                                        }).catch(function(error) {
+                                          window.close();
+                                          console.log("Error getting documents: ", error);
+                                      });
+                                    } 
+                                  }).catch(function(error) {
+                                    window.close();
+                                    console.log("Error getting document:", error);
+                                  });
+                              });
+                          });
+                        }
+                      
+                        });
+                  }
+            });
+      }
+    }
+  </script>
+</body>
+</html>
