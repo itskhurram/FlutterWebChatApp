@@ -27,6 +27,7 @@ class _AskQuestionState extends State<AskQuestion> {
   final questionField = TextEditingController();
   List<String> _data = [];
   bool validate = false;
+  bool buttonClicked = false;
 
   @override
   void initState() {
@@ -65,10 +66,8 @@ class _AskQuestionState extends State<AskQuestion> {
                 color: Colors.white,
                 tooltip: "Back",
                 onPressed: () {
-                  Navigator.pushReplacement(
-                      context,
-                      MaterialPageRoute(
-                          builder: (BuildContext ctx) => Home()));
+                  Navigator.pushReplacement(context,
+                      MaterialPageRoute(builder: (BuildContext ctx) => Home()));
                 })
           ],
           bottom: PreferredSize(
@@ -199,9 +198,12 @@ class _AskQuestionState extends State<AskQuestion> {
                               ? validate = true
                               : validate = false;
                         });
-                        if (checkFields() && questionField.text.isNotEmpty) {
+                        if (checkFields() &&
+                            questionField.text.isNotEmpty &&
+                            this.buttonClicked == false) {
                           this._errorMessage = "";
                           this.question = questionField.text;
+                          this.buttonClicked = true;
                           databaseHandler
                               .saveQuestion('Question', question, emailAddress,
                                   dropdownValue)
@@ -213,8 +215,7 @@ class _AskQuestionState extends State<AskQuestion> {
                                 Navigator.pushReplacement(
                                     context,
                                     MaterialPageRoute(
-                                        builder: (BuildContext ctx) =>
-                                            Home()));
+                                        builder: (BuildContext ctx) => Home()));
                               } else {
                                 this._successMessage = "";
                                 this._errorMessage =
